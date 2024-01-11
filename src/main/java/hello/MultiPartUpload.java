@@ -1,96 +1,80 @@
 package hello;
 
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.*;
-import software.amazon.awssdk.core.sync.*;
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.SdkClientException;
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.*;
+
 import java.io.File;
-import java.nio.file.Path;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MultiPartUpload {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
+        Regions clientRegion = Regions.DEFAULT_REGION;
         String bucketName = "yuvarajmultipart";
         String keyName = "City.mp3";
         String filePath = "Songs";
 
-        Region region = Region.US_EAST_1; // Replace with your desired region
+        File file = new File(filePath);
+        long contentLength = file.length();
+        long partSize = 1 * 1024 * 1024; // Set part size to 5 MB. 
 
-        AwsBasicCredentials awsCreds = AwsBasicCredentials.create(accessKey, secretKey);
+        try {
+            AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
+                    .withRegion(clientRegion)
+                    .withCredentials(new ProfileCredentialsProvider("profilex"))
+                    .build();
 
-        try (S3Client s3Client = S3Client.builder()
-                .region(region)
-                .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
-                .build()) {
+            // Create a list of ETag objects. You retrieve ETags for each object part uploaded,
+            // then, after each individual part has been uploaded, pass the list of ETags to 
+            // the request to complete the upload.
+            List<PartETag> partETags = new ArrayList<PartETag>();
 
-            File file = new File(filePath);
-            long contentLength = file.length();
-            long partSize = 1 * 1024 * 1024; // 5MB part size (adjust as needed)
+            // Initiate the multipart upload.
+            InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucketName, keyName);
+            InitiateMultipartUploadResult initResponse = s3Client.initiateMultipartUpload(initRequest);
 
-            CreateMultipartUploadResponse createMultipartUploadResponse = s3Client.createMultipartUpload(
-                    CreateMultipartUploadRequest.builder()
-                            .bucket(bucketName)
-                            .key(keyName)
-                            .build());
+            // Upload the file parts.
+            long filePosition = 0;
+            for (int i = 1; filePosition < contentLength; i++) {
+                // Because the last part could be less than 5 MB, adjust the part size as needed.
+                partSize = Math.min(partSize, (contentLength - filePosition));
 
-            String uploadId = createMultipartUploadResponse.uploadId();
+                // Create the request to upload a part.
+                UploadPartRequest uploadRequest = new UploadPartRequest()
+                        .withBucketName(bucketName)
+                        .withKey(keyName)
+                        .withUploadId(initResponse.getUploadId())
+                        .withPartNumber(i)
+                        .withFileOffset(filePosition)
+                        .withFile(file)
+                        .withPartSize(partSize);
 
-            List<CompletedPart> completedParts = new ArrayList<>();
+                // Upload the part and add the response's ETag to our list.
+                UploadPartResult uploadResult = s3Client.uploadPart(uploadRequest);
+                partETags.add(uploadResult.getPartETag());
 
-            try {
-                long filePosition = 0;
-                for (int i = 1; filePosition < contentLength; i++) {
-                    long partSizeBytes = Math.min(partSize, contentLength - filePosition);
-
-                    UploadPartResponse uploadPartResponse = s3Client.uploadPart(
-                            UploadPartRequest.builder()
-                                    .bucket(bucketName)
-                                    .key(keyName)
-                                    .uploadId(uploadId)
-                                    .partNumber(i)
-                                    .contentLength(partSizeBytes)
-                                    .build(),
-                            RequestBody.fromFile(file, filePosition, partSizeBytes));
-
-                    System.out.println("Part " + i + " uploaded successfully. ETag: " + uploadPartResponse.eTag());
-
-                    completedParts.add(CompletedPart.builder()
-                            .partNumber(i)
-                            .eTag(uploadPartResponse.eTag())
-                            .build());
-
-                    filePosition += partSizeBytes;
-                }
-
-                CompleteMultipartUploadResponse completeMultipartUploadResponse = s3Client.completeMultipartUpload(
-                        CompleteMultipartUploadRequest.builder()
-                                .bucket(bucketName)
-                                .key(keyName)
-                                .uploadId(uploadId)
-                                .multipartUpload(CompletedMultipartUpload.builder().parts(completedParts).build())
-                                .build());
-
-                System.out.println("Multipart upload completed. Object URL: " +
-                        s3Client.utilities().getUrl(builder -> builder.bucket(bucketName).key(keyName)));
-
-            } catch (Exception e) {
-                s3Client.abortMultipartUpload(AbortMultipartUploadRequest.builder()
-                        .bucket(bucketName)
-                        .key(keyName)
-                        .uploadId(uploadId)
-                        .build());
-                throw e;
+                filePosition += partSize;
             }
 
-        } catch (S3Exception e) {
-            System.err.println(e.awsErrorDetails().errorMessage());
-            System.exit(1);
+            // Complete the multipart upload.
+            CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest(bucketName, keyName,
+                    initResponse.getUploadId(), partETags);
+            s3Client.completeMultipartUpload(compRequest);
+        } catch (AmazonServiceException e) {
+            // The call was transmitted successfully, but Amazon S3 couldn't process 
+            // it, so it returned an error response.
+            e.printStackTrace();
+        } catch (SdkClientException e) {
+            // Amazon S3 couldn't be contacted for a response, or the client
+            // couldn't parse the response from Amazon S3.
+            e.printStackTrace();
         }
     }
 }
-
-
