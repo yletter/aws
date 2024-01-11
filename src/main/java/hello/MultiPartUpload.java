@@ -16,7 +16,7 @@ import java.util.List;
 public class MultiPartUpload {
 
     public static void main(String[] args) throws IOException {
-        Regions clientRegion = Regions.DEFAULT_REGION;
+        Regions clientRegion = Regions.US_EAST_1;
         String bucketName = "yuvarajmultipart";
         String keyName = "City.mp3";
         String filePath = "Songs";
