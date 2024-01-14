@@ -15,7 +15,6 @@ import software.amazon.awssdk.services.s3.model.*;
 public class MultipartUpload {
 
     public static void main(String[] args) {
-        Regions clientRegion = Regions.US_EAST_1;
         String bucketName = "yuvarajmultipart";
         String keyName = "City.mp3";
         String filePath = "Songs";
@@ -53,7 +52,7 @@ public class MultipartUpload {
 
                 buffer.flip();
                 UploadPartRequest uploadPartRequest = UploadPartRequest.builder()
-                    .bucket(existingBucketName)
+                    .bucket(bucketName)
                     .key(keyName)
                     .uploadId(uploadId)
                     .partNumber(partNumber)
