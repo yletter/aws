@@ -34,7 +34,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: report
-        path: target/aws-s3-multi-0.2.0.jar
+        path: target/aws-1.0.0.jar
         
     - name: Download all workflow run artifacts
       uses: actions/download-artifact@v3
