@@ -39,7 +39,7 @@ public class MultipartUpload {
         // Prepare the parts to be uploaded
         List<CompletedPart> completedParts = new ArrayList<>();
         int partNumber = 1;
-        ByteBuffer buffer = ByteBuffer.allocate(1 * 1024 * 1024); // Set your preferred part size (5 MB in this example)
+        ByteBuffer buffer = ByteBuffer.allocate(5 * 1024 * 1024); // Set your preferred part size (5 MB in this example)
 
         // Read the file and upload each part
         try (RandomAccessFile file = new RandomAccessFile(filePath, "r")) {
