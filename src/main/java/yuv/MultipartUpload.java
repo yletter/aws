@@ -11,7 +11,13 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.*;
+/*
 
+aws s3api list-multipart-uploads --bucket yuvarajmultipart --profile default
+aws s3api abort-multipart-upload --bucket yuvarajmultipart --key City.mp3 --upload-id Pahhwp1BFerdHZIojJxKXFAfxYsgNLVSz6WUINMyXcg36BivcGm5nxC46xVXyeM7Ty_JLvDzD9w4ECGs9qS.eB1SJfz97KQM_J4Am_PE.dFf2AnyJtSK5ta6MeF_R8Rt --profile default
+aws s3api list-multipart-uploads --bucket yuvarajmultipart --profile default --query "Uploads[*].[UploadId,Key]" --output text
+
+*/
 public class MultipartUpload {
 
     public static void main(String[] args) {
