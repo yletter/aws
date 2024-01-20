@@ -61,3 +61,68 @@ e.printStackTrace();
 }
 }
 }
+public static void main(String profile, FileWriter csvWriter, Region region) {
+
+// Create ACM client
+
+AcmClient acmClient = AcmClient.builder().region(region)
+
+.credentialsProvider(ProfileCredentialsProvider.builder().profileName(profile).build()).build();
+
+// Retrieve ACM certificates
+
+ListCertificatesResponse listCertificatesResponse = acmClient.listCertificates();
+
+List<CertificateSummary> certificateSummaries =
+
+listCertificatesResponse.certificateSummaryList();
+
+try {
+
+// Write certificate metadata to CSV
+
+for (CertificateSummary certificateSummary: certificateSummaries) {
+
+DescribeCertificateResponse describeCertificateResponse = acmClient.describeCertificate(
+
+DescribeCertificateRequest.builder()
+
+.certificateArn(certificateSummary.certificateArn())
+
+.build()
+
+);
+
+CertificateDetail certificateDetail = describeCertificateResponse.certificate();
+
+csvWriter.append(String.format("%5, %s, %s, %s, %s, %s, %s, %s, %s\n", profile.replaceAll("blue", ""),
+
+region.id(),
+
+certificateDetail.certificateArn(),
+
+certificateDetail.domainName(),
+
+certificateDetail.statusAsString(),
+
+certificateDetail.typeAsString(), certificateDetail.hasInUseBy(),
+
+certificateDetail.issuedAt(),
+
+certificateDetail.notAfter()
+
+));
+
+System.out.println("ACM certificates metadata exported -" + profile);
+
+}
+
+} catch (IOException e) {
+
+e.printStackTrace();
+
+}
+
+}
+
+}
