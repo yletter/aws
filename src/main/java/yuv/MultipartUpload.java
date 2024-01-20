@@ -69,6 +69,8 @@ public class MultipartUpload {
                 buffer.clear();
                 position += bytesRead;
                 partNumber++;
+                if (partNumber < 10) 
+                    break; // interrupt
             }
         } catch (IOException e) {
             e.printStackTrace();
